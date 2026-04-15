@@ -10,7 +10,7 @@
 
 #define numberof(a) (sizeof(a)/sizeof(a[0]))
 
-// UIの視認性向上のため幅を少し広げています
+// window size
 #define WINDOW_WIDTH	300
 #define WINDOW_HEIGHT	40
 
@@ -39,9 +39,7 @@ static TCHAR szSaveFormat[8]=TEXT("bmp");
 static int JpegLevel=90;
 static int PngLevel=6;
 static bool fCopyFileName=false;
-
-// 連番管理用変数
-static int SequenceCount = 0;
+static int SequenceCount = 0; //連番用
 static int SequenceDigits = 3;
 
 // --- 関数プロトタイプ宣言 ---
@@ -63,7 +61,7 @@ static FILTER_DLL filter = {
 	func_WndProc,
 	NULL, NULL,
 	NULL, 0,
-	"キャプチャ・ユーティリティ ver.0.3.0", // バージョンアップ
+	"キャプチャ・ユーティリティ ver.0.3.1", // バージョンアップ
 	NULL, NULL,
 	NULL,
 	NULL, NULL,
@@ -265,10 +263,22 @@ BOOL func_WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam,void *editp
 					wsprintf(szExt, TEXT(".%s"), ImageCodec.GetExtension(Format));
 				}
 
-				// 指定桁数の連番付きファイル名を生成 (例: base_001.png)
+				// 空き番号が見つかるまで連番をスキップ
 				TCHAR szFormatStr[16];
-				wsprintf(szFormatStr, TEXT("%%s_%%0%dd%%s"), SequenceDigits);
-				wsprintf(szFileName, szFormatStr, szBaseName, SequenceCount, szExt);
+					wsprintf(szFormatStr, TEXT("%%s_%%0%dd%%s"), SequenceDigits);
+
+				while (true) {
+					wsprintf(szFileName, szFormatStr, szBaseName, SequenceCount, szExt);
+            
+					// ファイルが存在しなければループを抜ける（この番号を使用する）
+					if (!PathFileExists(szFileName)) {
+						break;
+					}
+					// 存在する場合は連番をカウントアップして再チェック
+					SequenceCount++;
+				}
+				// UI側の連番表示も更新しておく
+				SetDlgItemInt(hwnd, IDC_SEQCOUNT, SequenceCount, FALSE);
 
 				// オプション設定
 				if (lstrcmpi(pszFormatName,"jpeg")==0) {
